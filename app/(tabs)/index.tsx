@@ -1,74 +1,94 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState, useRef, useEffect } from "react";
+import { View, Text, Animated, PanResponder, TouchableOpacity } from "react-native";
+import * as Speech from "expo-speech";
+import * as Haptics from "expo-haptics";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const DragCircle = () => {
+  const [activeMode, setActiveMode] = useState<string | null>("Blind Assistance");
+  const position = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const lastMode = useRef<string | null>(null);
+  const dragStarted = useRef(false);
 
-export default function HomeScreen() {
+  useEffect(() => {
+    speak("Blind Assistance");
+  }, []);
+
+  const speak = (text: string) => {
+    Speech.speak(text, { language: "en-US", pitch: 1.0, rate: 1.0 });
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        if (!dragStarted.current) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          dragStarted.current = true;
+        }
+
+        Animated.timing(position, {
+          toValue: { x: 0, y: 0 },
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      },
+      onPanResponderMove: (event, gesture) => {
+        position.setValue({ x: gesture.dx, y: gesture.dy });
+
+        let selectedMode = null;
+        if (gesture.dy < -50) {
+          selectedMode = "Face Recognition Mode";
+        } else if (gesture.dx > 50) {
+          selectedMode = "Book Reading Mode";
+        } else if (gesture.dy > 50) {
+          selectedMode = "Object Detection Mode";
+        } else if (gesture.dx < -50) {
+          selectedMode = "Privacy Mode";
+        }
+
+        if (selectedMode && lastMode.current !== selectedMode) {
+          setActiveMode(selectedMode);
+          lastMode.current = selectedMode;
+          speak(`${selectedMode}`);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        }
+      },
+      onPanResponderRelease: () => {
+        if (lastMode.current) {
+          speak(`${lastMode.current} selected`);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        dragStarted.current = false;
+
+        Animated.spring(position, {
+          toValue: { x: 0, y: 0 },
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={{ flex: 1, backgroundColor: "black", justifyContent: "center", alignItems: "center" }}>
+      <Text style={{ color: "white", fontSize: 24, position: "absolute", top: 50 }}>{activeMode}</Text>
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={{
+          width: 120,
+          height: 120,
+          backgroundColor: activeMode !== "Blind Assistance" ? "white" : "gray",
+          borderRadius: 60,
+          justifyContent: "center",
+          alignItems: "center",
+          transform: [{ translateX: position.x }, { translateY: position.y }],
+        }}
+      >
+        <TouchableOpacity>
+          <Text style={{ color: "black" }}>Hold</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+export default DragCircle;

@@ -9,13 +9,22 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
+      },
+      "bundleIdentifier": "com.anonymous.blindassist"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.anonymous.blindassist"
     },
     "web": {
       "bundler": "metro",
@@ -32,10 +41,19 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-speech-recognition"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "df0608a3-8ea3-4ac8-b4c2-015d2dcbfd46"
+      }
     }
   }
 }
